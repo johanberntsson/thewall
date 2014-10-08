@@ -1,18 +1,42 @@
+/* (c) 2014 Johan Berntsson
+ *
+ * written for the cc65 cross compiler for 6502 computers,
+ * tested on commodore 64
+ *
+ * Released under the GNU GENERAL PUBLIC LICENSE version 2
+ */
+
 #include <conio.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <peekpoke.h>
 
-static unsigned char screen_height, screen_width;
-static unsigned char game_width = 15, game_height = 15;
-static unsigned char offset_x, offset_y;
 static unsigned char colors[] = { COLOR_RED, COLOR_GREEN, COLOR_YELLOW };
+
+/* Sound effects from sid.c */
+extern void initSid();
+extern void playOneTone(char freqIndex);
+extern void playThreeTones(char freqIndex0, char freqIndex1, char freqIndex2);
+extern int play_melody(unsigned char __fastcall__ (*callback)(void));
+
+
+/* C64 screen size defaults */
+static unsigned char screen_width = 40, screen_height = 25;
+static unsigned char game_width = 15, game_height = 15;
+static unsigned char offset_x = 15, offset_y = 5;
 
 void print_centered(unsigned char y, const char *text) {
     unsigned char n = strlen(text);
     unsigned char x = (screen_width - n)/ 2;
     gotoxy((screen_width - n)/ 2, y);
     cprintf(text);
+}
+
+unsigned char callback_pressanykey(void) {
+    // 0 if no key pressed, 
+    // otherwise 1... (# of keys in the buffer)
+    return PEEK(198);
 }
 
 void show_intro(void) {
@@ -31,6 +55,8 @@ void show_intro(void) {
     print_centered(n2, "By Johan Berntsson, 2014");
     textcolor(COLOR_RED);
     print_centered(n3, "Press any key");
+
+    play_melody(callback_pressanykey);
     cgetc();
 }
 
@@ -44,6 +70,7 @@ void draw_game(void) {
 
     textcolor(COLOR_WHITE);
     print_centered(0,  "The Wall");
+    print_centered(2,  "Keys: a,s,w,z,space. q to quit");
 
     // draw frame
     textcolor(COLOR_BLUE);
@@ -66,11 +93,10 @@ void draw_game(void) {
 }
 
 void main(void) {
-    unsigned char key, cx, cy;
+    unsigned char key, x, y, new_x, new_y, snd_effect;
 
     // should be 40*25, but check to make sure
     screensize(&screen_width, &screen_height);
-
 
     // calculate offsets
     offset_x = (screen_width - game_width)/2;
@@ -81,17 +107,24 @@ void main(void) {
         return;
     }
 
+	initSid();
     show_intro();
     draw_game();
 
     // init cursor
-    cx = 0;
-    cy = 0;
+    x = 0;
+    y = 0;
+
+    // enable keyboard repeat
+    POKE(650, 128);
 
     // wait for a key
     cursor(1);
     for(;;) {
-        gotoxy(offset_x + cx, offset_y + cy);
+        new_x = x;
+        new_y = y;
+        snd_effect = 0;
+        gotoxy(offset_x + x, offset_y + y);
         key = cgetc();
 
         switch(key) {
@@ -101,25 +134,43 @@ void main(void) {
                 printf("Thank you for playing this game!");
                 return;
             case 'a':
-                --cx;
+                --new_x;
+                snd_effect = 1;
                 break;
             case 's':
-                ++cx;
+                ++new_x;
+                snd_effect = 2;
                 break;
             case 'w':
-                --cy;
+                --new_y;
+                snd_effect = 3;
                 break;
             case 'z':
-                ++cy;
+                ++new_y;
+                snd_effect = 4;
                 break;
             case ' ':
                 // TODO
                 // here the magic happens
+                playThreeTones(0, 2, 5);
+                playThreeTones(0, 2, 4);
+                playThreeTones(0, 2, 5);
+                break;
+            default:
                 break;
         }
-        if(cx < 0) cx = 0;
-        if(cy < 0) cy = 0;
-        if(cx >= game_width) cx = game_width - 1;
-        if(cy >= game_height) cy = game_height - 1;
+        if(new_x < 0) new_x = 0;
+        if(new_y < 0) new_y = 0;
+        if(new_x >= game_width) new_x = game_width - 1;
+        if(new_y >= game_height) new_y = game_height - 1;
+
+        if(x != new_x || y != new_y) {
+            if(callback_pressanykey() == 0) {
+                playOneTone(snd_effect);
+                playThreeTones(0, 2, 4);
+            }
+            x = new_x;
+            y = new_y;
+        }
     }
 }

@@ -89,7 +89,6 @@ void playThreeTones(uint8_t freqIndex0, uint8_t freqIndex1, uint8_t freqIndex2)
  
 int play_melody(unsigned char __fastcall__ (*callback)(void))
 {
-	initSid();
 	g_sidBase[23] = 7;
 	g_sidBase[22] = 10;
 	while (1) {
