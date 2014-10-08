@@ -166,17 +166,25 @@ void compact_vertically()
 
 void compact_horizontally()
 {
-    unsigned char x, y, z;
-    for(y = 0; y < game_height; y--) {
-        for(x = 0; x < game_width; x++) {
-            if(map[x][y].state == ' ') {
-                for(z = x + 1; z < game_width && map[z][y].state == ' '; z++);
-                if(z < game_width) {
-                    map[x][y].state = map[z][y].state;
-                    map[x][y].color = map[z][y].color;
-                    map[z][y].state = ' ';
+    unsigned char x, xx, x1, x2, y;
+    for(x1 = 0; x1 < game_width && map[x1][game_height - 1].state == ' '; x1++);
+    if(x1 >= game_width) return;
+    for(x2 = game_width - 1; x2 != 255 && map[x1][game_height - 1].state == ' '; x1--);
+    if(x1 == 255) return;
+
+    // x1 is the first non-empty column
+    // x2 is the last non-empty column
+    for(x = x1; x < x2; x++) {
+        while(map[x][game_height - 1].state == ' ') {
+            if(x1 == x2) return;
+            // found an empty column, eliminate it
+            for(xx = x; xx < x2; xx++) {
+                for(y = 0; y < game_height; y++) {
+                    map[xx][y].state = map[xx + 1][y].state;
+                    map[xx][y].color = map[xx + 1][y].color;
                 }
             }
+            --x2;
         }
     }
 }
@@ -202,6 +210,8 @@ void add_brick_to_queue(unsigned char x, unsigned char y, unsigned char color)
 void break_bricks(unsigned char x, unsigned char y)
 {
     unsigned char xx, yy, color, first;
+    if(map[x][y].state != '*') return;
+
     color = map[x][y].color;
     // first entry
     queue_len = 1;
@@ -275,7 +285,7 @@ int play_game()
             case ' ':
                 break_bricks(x, y);
                 compact_vertically();
-                //compact_horizontally();
+                compact_horizontally();
                 if(draw_bricks() == 0) {
                     textcolor(COLOR_WHITE);
                     print_centered(screen_height/2, "YOU WIN!");
@@ -288,10 +298,10 @@ int play_game()
                 }
                 if(only_single_bricks_left()) {
                     textcolor(COLOR_WHITE);
-                    print_centered(screen_height/2, "YOU WIN!");
-                    playThreeTones(0, 2, 3);
-                    playThreeTones(0, 2, 2);
-                    playThreeTones(0, 2, 1);
+                    print_centered(screen_height/2, "YOU LOST!");
+                    playThreeTones(0, 2, 6);
+                    playThreeTones(0, 2, 5);
+                    playThreeTones(0, 2, 4);
                     cgetc();
                     return 1;
                 }
