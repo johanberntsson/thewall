@@ -3,13 +3,16 @@
 ### V1.3.0(w) 2010 - 2013 Oliver Schmidt & Patryk "Silver Dream !" Łogiewa  ###
 ###############################################################################
 
+# d64 target added by Johan Berntsson 2014
+
 ###############################################################################
 ### In order to override defaults - values can be assigned to the variables ###
 ###############################################################################
 
 # Name of the D64 file (if target d64 is used)
-# All files in d64 data (if present) will be added to the image
+# All files in the d64 data folder (if present) will be added to the image
 D64NAME := $(notdir $(CURDIR))
+D64FOLDER := d64data
 
 # Space or comma separated list of cc65 supported target platforms to build for.
 # Default: c64 (lowercase!)
@@ -322,7 +325,7 @@ test: d64
 d64: $(PROGRAM)
 	c1541 -format ${D64NAME},00 d64 ${D64NAME}.d64
 	c1541 -attach ${D64NAME}.d64 -write ${PROGRAM} ${D64NAME}
-	c1541 -attach ${D64NAME}.d64 $(foreach dsc, $(wildcard d64data/*), -write $(dsc))
+	c1541 -attach ${D64NAME}.d64 $(foreach dsc, $(wildcard ${D64FOLDER}/*), -write $(dsc))
 
 clean:
 	$(call RMFILES,$(OBJECTS))

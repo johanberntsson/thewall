@@ -15,4 +15,4 @@ Add these lines to .bashrc (adjust as needed)
 	export PATH=${PATH}:${CC65_HOME}/bin
 
 Type make to compile and create the thewall.d64 image. If there are no
-errors make will also start vice with the new d64 image preloaded automatically.
+errors make will also start vice with the new d64 image preloaded.

@@ -1,7 +1,9 @@
+/* Based on sid.c from Frank Buss,
+ * http://www.frank-buss.de/c64/sid-test.html
+ */
+
 #include <stdio.h>
- 
-typedef unsigned char uint8_t;
-typedef unsigned short uint16_t;
+#include <stdint.h>
  
 uint16_t g_freq[8] = {
 	0x22cd,
