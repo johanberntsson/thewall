@@ -16,32 +16,20 @@
 #define MAX_WIDTH 15
 #define MAX_HEIGHT 15
 
-/* User macros */
-#define B8(d) ((unsigned char)B8__(HEX__(d)))
-static const unsigned char Sprite0[64] = {
-    0xFF, 0x00, 0x00,
-    0x81, 0x00, 0x00,
-    0x81, 0x00, 0x00,
-    0x81, 0x00, 0x00,
-    0x81, 0x00, 0x00,
-    0x81, 0x00, 0x00,
-    0x81, 0x00, 0x00,
-    0xFF, 0x00, 0x00,
-    0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 
-    0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00,
-    0x00
-};
+#define SPRITE_PTR  0x07F8
+
+#define JOY2  0xDC00
+#define JOYUP  0x01
+#define JOYDOWN  0x02
+#define JOYLEFT  0x04
+#define JOYRIGHT  0x08
+#define JOYFIRE  0x10
+
+#define WAIT_WHILE_RASTERLINE_LOW    while (!(VIC.ctrl1 & 0x80)) {};
+#define WAIT_WHILE_RASTERLINE_HIGH   while (VIC.ctrl1 & 0x80) {};
+
+/* Sprites defined in sprites.s, must be 64 byte aligned */
+extern const unsigned char sprites[64][]; 
 
 static unsigned char colors[] = { COLOR_RED, COLOR_GREEN, COLOR_YELLOW };
 
@@ -239,7 +227,7 @@ void add_brick_to_queue(unsigned char x, unsigned char y, unsigned char color)
 
 void break_bricks(unsigned char x, unsigned char y)
 {
-    unsigned char xx, yy, color, first;
+    unsigned char color, first;
     if(map[x][y].state != '*') return;
 
     color = map[x][y].color;
@@ -268,11 +256,12 @@ void break_bricks(unsigned char x, unsigned char y)
 }
 
 void set_sprite(int xx, int yy) {
+    // offsets needed to get the cursor on top of
+    // the character at xx,yy
     xx = 8*xx + 24;
     yy = 8*yy + 48 + 2;
-    POKE(0xd000, xx & 0xff); // sprite 0, x
-    //POKE(0xd010, 1); // sprite 0, x (highest bit)
-    POKE(0xd001, yy & 0xff); // sprite 0, y
+    VIC.spr0_x = xx & 0xff;
+    VIC.spr0_y = yy & 0xff;
 }
 
 int play_game()
@@ -365,6 +354,7 @@ int play_game()
 }
 
 void main(void) {
+    int sprite_base = ((int) sprites/64);
 
     // should be 40*25, but check to make sure
     screensize(&screen_width, &screen_height);
@@ -382,13 +372,13 @@ void main(void) {
     show_intro();
 
     // test sprite
-    memcpy (0x340, Sprite0, 64);
-    POKE(0x07f8, 0x340/64); // sprite 0 data
-    POKE(0xd015, 1);   // enable sprite 0
+    POKE(SPRITE_PTR, sprite_base); // sprite 0 data
+    VIC.spr_ena = 1;
+    VIC.spr0_color = COLOR_WHITE;
 
     while(play_game());
 
-    POKE(0xd015, 0);   // disable all sprites
+    VIC.spr_ena = 0;
 
     clrscr();
     textcolor(COLOR_WHITE);
