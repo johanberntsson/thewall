@@ -16,6 +16,33 @@
 #define MAX_WIDTH 15
 #define MAX_HEIGHT 15
 
+/* User macros */
+#define B8(d) ((unsigned char)B8__(HEX__(d)))
+static const unsigned char Sprite0[64] = {
+    0xFF, 0x00, 0x00,
+    0x81, 0x00, 0x00,
+    0x81, 0x00, 0x00,
+    0x81, 0x00, 0x00,
+    0x81, 0x00, 0x00,
+    0x81, 0x00, 0x00,
+    0x81, 0x00, 0x00,
+    0xFF, 0x00, 0x00,
+    0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 
+    0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00,
+    0x00
+};
+
 static unsigned char colors[] = { COLOR_RED, COLOR_GREEN, COLOR_YELLOW };
 
 /* Sound effects from sid.c */
@@ -175,14 +202,17 @@ void compact_horizontally()
     // x1 is the first non-empty column
     // x2 is the last non-empty column
     for(x = x1; x < x2; x++) {
-        while(map[x][game_height - 1].state == ' ') {
-            if(x1 == x2) return;
+        while(x < x2 && map[x][game_height - 1].state == ' ') {
             // found an empty column, eliminate it
             for(xx = x; xx < x2; xx++) {
                 for(y = 0; y < game_height; y++) {
                     map[xx][y].state = map[xx + 1][y].state;
                     map[xx][y].color = map[xx + 1][y].color;
                 }
+            }
+            // clear the rightmost colum (since we moved it leftwards)
+            for(y = 0; y < game_height; y++) {
+                map[x2][y].state = ' ';
             }
             --x2;
         }
@@ -237,6 +267,14 @@ void break_bricks(unsigned char x, unsigned char y)
     }
 }
 
+void set_sprite(int xx, int yy) {
+    xx = 8*xx + 24;
+    yy = 8*yy + 48 + 2;
+    POKE(0xd000, xx & 0xff); // sprite 0, x
+    //POKE(0xd010, 1); // sprite 0, x (highest bit)
+    POKE(0xd001, yy & 0xff); // sprite 0, y
+}
+
 int play_game()
 {
     unsigned char key, x, y, new_x, new_y, snd_effect;
@@ -258,13 +296,11 @@ int play_game()
         new_y = y;
         snd_effect = 0;
         gotoxy(offset_x + x, offset_y + y);
+        set_sprite(offset_x + x , offset_y + y);
         key = cgetc();
 
         switch(key) {
             case 'q':
-                clrscr();
-                textcolor(COLOR_WHITE);
-                printf("Thank you for playing this game!");
                 return 0;
             case 'a':
                 --new_x;
@@ -345,6 +381,17 @@ void main(void) {
     initSid();
     show_intro();
 
+    // test sprite
+    memcpy (0x340, Sprite0, 64);
+    POKE(0x07f8, 0x340/64); // sprite 0 data
+    POKE(0xd015, 1);   // enable sprite 0
+
     while(play_game());
+
+    POKE(0xd015, 0);   // disable all sprites
+
+    clrscr();
+    textcolor(COLOR_WHITE);
+    printf("Thank you for playing this game!");
 }
 
