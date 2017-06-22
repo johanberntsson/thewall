@@ -1,8 +1,7 @@
 The Wall
 =======
-Johan Berntsson, 2014
 
-A game for the Commodore 64 written in C using the cc65 cross compiler
+This is a game for the Commodore 64 written in C using the cc65 cross compiler
 
 ![Screenshot](https://github.com/johanberntsson/thewall/blob/master/thewall.png)
 
