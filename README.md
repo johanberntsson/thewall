@@ -6,8 +6,10 @@ A game for the Commodore 64 written in C using the cc65 cross compiler
 
 ![Screenshot](https://github.com/johanberntsson/thewall/blob/master/thewall.png)
 
+This repository includes the a binary called thewall.d64 which can be used in an C64 emulator such as [Vice](http://vice-emu.sourceforge.net/) or any other emulator that can handle the d64 virtual floppy disc format.
 
-Building and running
+
+Building
 -----
 
 You need to install the cc65 cross compiler and the vice C64 emulator.
