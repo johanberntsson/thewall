@@ -1,7 +1,9 @@
-/* (c) 2014 Johan Berntsson
+/* (c) 2014,2020 Johan Berntsson
  *
  * written for the cc65 cross compiler for 6502 computers,
  * tested on commodore 64
+ *
+ * 2020 version: added bonus for more smashed bricks, improved sound
  *
  * Released under the GNU GENERAL PUBLIC LICENSE version 2
  */
@@ -67,6 +69,13 @@ void print_centered(unsigned char y, const char *text) {
     cprintf(text);
 }
 
+void print_centered_1arg(unsigned char y, const char *text, void *arg) {
+    unsigned char n = strlen(text);
+    unsigned char x = (screen_width - n)/ 2;
+    gotoxy((screen_width - n)/ 2, y);
+    cprintf(text, arg);
+}
+
 unsigned char callback_pressanykey(void) {
     // 0 if no key pressed, 
     // otherwise 1... (# of keys in the buffer)
@@ -74,9 +83,9 @@ unsigned char callback_pressanykey(void) {
 }
 
 void show_intro(void) {
-    unsigned char n1 = screen_height / 4;
-    unsigned char n2 = screen_height / 2;
-    unsigned char n3 = screen_height - n1;
+    unsigned char n1 = screen_height / 8;
+    unsigned char n2 = screen_height / 4;
+    unsigned char n3 = screen_height / 2;
 
     // Reset colours
     clrscr();
@@ -86,9 +95,18 @@ void show_intro(void) {
     textcolor(COLOR_WHITE);
     print_centered(n1, "The Wall");
     textcolor(COLOR_YELLOW);
-    print_centered(n2, "By Johan Berntsson, 2014");
+    print_centered(n2, "By Johan Berntsson, 2014-2020");
+    print_centered(n2+2,  "Keys: move with a,s,w,z or cursor keys");
+    print_centered(n2+3,  "space to select, q to quit");
+    textcolor(COLOR_GREEN);
+    print_centered(n3, "Push space to crush all");
+    print_centered(n3+1, "connected bricks of the same colour");
+    print_centered(n3+3, "The more bricks you crush each");
+    print_centered(n3+4, "time, the higher the score");
+    print_centered(n3+6, "You win if you clear all bricks");
+    print_centered(n3+7, "You lose if only single bricks remain");
     textcolor(COLOR_RED);
-    print_centered(n3, "Press any key");
+    print_centered(n3+9, "Press any key");
 
     play_melody(callback_pressanykey);
     cgetc();
@@ -146,7 +164,8 @@ void draw_game(void) {
 
     textcolor(COLOR_WHITE);
     print_centered(0,  "The Wall");
-    print_centered(2,  "Keys: a,s,w,z,space. q to quit");
+    print_centered(2,  "Score: 0");
+    //print_centered(2,  "Keys: a,s,w,z,space. q to quit");
 
     // draw frame
     textcolor(COLOR_BLUE);
@@ -225,10 +244,11 @@ void add_brick_to_queue(unsigned char x, unsigned char y, unsigned char color)
     }
 }
 
-void break_bricks(unsigned char x, unsigned char y)
+unsigned char break_bricks(unsigned char x, unsigned char y)
 {
     unsigned char color, first;
-    if(map[x][y].state != '*') return;
+    unsigned char smashed_bricks = 0;
+    if(map[x][y].state != '*') return 0;
 
     color = map[x][y].color;
     // first entry
@@ -241,6 +261,7 @@ void break_bricks(unsigned char x, unsigned char y)
         x = queue[queue_len].x;
         y = queue[queue_len].y;
         remove_brick(x, y);
+        ++smashed_bricks;
         add_brick_to_queue(x - 1, y, color);
         add_brick_to_queue(x + 1, y, color);
         add_brick_to_queue(x, y - 1, color);
@@ -248,11 +269,13 @@ void break_bricks(unsigned char x, unsigned char y)
         if(first == 1 && queue_len == 0) {
             // not allowed to remove only one brick
             // put it back
-            map[x][y].state = '*';
+            //map[x][y].state = '*';
+            //smashed_bricks = 0;
         } else {
             first = 0;
         }
     }
+    return smashed_bricks;
 }
 
 void set_sprite(int xx, int yy) {
@@ -266,6 +289,8 @@ void set_sprite(int xx, int yy) {
 
 int play_game()
 {
+    int score = 0;
+    unsigned char smashed_bricks, bonus;
     unsigned char key, x, y, new_x, new_y, snd_effect;
 
     init_map();
@@ -290,27 +315,44 @@ int play_game()
 
         switch(key) {
             case 'q':
+            case 3:
                 return 0;
             case 'a':
+            case 157:
+                // left
                 --new_x;
                 snd_effect = 1;
                 break;
             case 's':
+            case 29:
+                // right
                 ++new_x;
                 snd_effect = 2;
                 break;
             case 'w':
+            case 145:
+                // up
                 --new_y;
                 snd_effect = 3;
                 break;
             case 'z':
+            case 17:
+                // down
                 ++new_y;
                 snd_effect = 4;
                 break;
             case ' ':
-                break_bricks(x, y);
+                smashed_bricks = break_bricks(x, y);
                 compact_vertically();
                 compact_horizontally();
+                // give bonus for smashing more bricks
+                score += smashed_bricks;
+                bonus = smashed_bricks;
+                while(bonus > 3) {
+                    bonus -= 3;
+                    score += bonus;
+                }
+                print_centered_1arg(2,  "Score: %d ", score);
                 if(draw_bricks() == 0) {
                     textcolor(COLOR_WHITE);
                     print_centered(screen_height/2, "YOU WIN!");
@@ -330,9 +372,11 @@ int play_game()
                     cgetc();
                     return 1;
                 }
-                playThreeTones(0, 2, 5);
-                playThreeTones(0, 2, 4);
-                playThreeTones(0, 2, 5);
+                if(smashed_bricks > 0) {
+                    //playThreeTones(0, 2, 5);
+                    //playThreeTones(0, 2, 4);
+                    //playThreeTones(0, 2, 5);
+                }
                 break;
             default:
                 break;
@@ -344,8 +388,8 @@ int play_game()
 
         if(x != new_x || y != new_y) {
             if(callback_pressanykey() == 0) {
-                playOneTone(snd_effect);
-                playThreeTones(0, 2, 4);
+                //playOneTone(snd_effect);
+                //playThreeTones(0, 2, 4);
             }
             x = new_x;
             y = new_y;

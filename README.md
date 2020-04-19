@@ -7,6 +7,7 @@ This is a game for the Commodore 64 written in C using the cc65 cross compiler
 
 This repository includes the a binary called thewall.d64 which can be used in an C64 emulator such as [Vice](http://vice-emu.sourceforge.net/) or any other emulator that can handle the d64 virtual floppy disc format.
 
+The 2020 version gives bonus points if you smash many bricks at the same time, allows cursor keys, and includes better instructions.
 
 Building
 -----
